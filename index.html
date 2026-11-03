@@ -118,7 +118,7 @@ const STORE_KEY = 'ukiyo-kintai:v1';
 const DEFAULT_SETTINGS = {
   lastName: '', fullName: '', dept: '', siteTeam: '',
   ownTo: '', siteTo: '', selfTo: '',
-  webhook: '',
+  webhook: '', threadLink: '', threadMonth: '',
   start: '10:00', end: '19:00', brk: '1:00',
   task: '', otLimit: 20,
   startDate: ''
@@ -274,11 +274,34 @@ function mailto(to, subject, body) {
 }
 
 /* ---------- Teams（ワークフローの webhook）へ送る ---------- */
+/* 返信先スレッドのリンク（Teamsで投稿の「…」→「リンクをコピー」）から、投稿のIDなどを取り出す */
+function parseThread(link) {
+  try {
+    const u = new URL(String(link).trim());
+    const m = u.pathname.match(/\/l\/message\/([^/]+)\/(\d+)/);
+    if (!m) return null;
+    const p = u.searchParams;
+    const parent = p.get('parentMessageId');
+    return {
+      channelId: decodeURIComponent(m[1]),
+      messageId: parent && parent !== '0' ? parent : m[2],
+      teamId: p.get('groupId') || '',
+      tenantId: p.get('tenantId') || ''
+    };
+  } catch (e) { return null; }
+}
+function threadOk() { return !!parseThread(S().threadLink); }
 async function postTeams(text) {
   const url = S().webhook.trim();
   if (!url) return { ok: false, msg: 'TeamsのワークフローURLが設定されていません。' };
+  const th = parseThread(S().threadLink);
+  if (!th) return { ok: false, msg: '返信先スレッドのリンクが設定されていません。設定から貼り付けてください。' };
   const card = {
     type: 'message',
+    // ワークフロー（「チャネル内のメッセージで返信する」）が使う値
+    text: text,
+    html: text.split('\n').map(esc).join('<br>'),
+    messageId: th.messageId, channelId: th.channelId, teamId: th.teamId,
     attachments: [{ contentType: 'application/vnd.microsoft.card.adaptive', contentUrl: null,
       content: { $schema: 'http://adaptivecards.io/schemas/adaptive-card.json', type: 'AdaptiveCard', version: '1.4',
         body: text.split('\n').map((t, i) => ({ type: 'TextBlock', text: t || ' ', wrap: true, spacing: i ? 'None' : 'Default' })) } }]
@@ -405,6 +428,7 @@ V.home = () => {
   return tanzaku('ホーム') + '<a class="gear" href="#settings" aria-label="設定">' + icon('gear') + '</a>' +
     '<div class="head" style="padding-right:108px"><span class="label">' + d.getFullYear() + '年</span><h2>' + jpDate(t) + (holidayName(t) ? '<span class="small">　' + esc(holidayName(t)) + '</span>' : '') + '</h2></div>' +
     (!settingsReady() ? '<a class="notice" href="#settings">' + icon('gear', 20) + '<span>はじめに「設定」で氏名や宛先を入れてください。</span></a>' : '') +
+    (S().webhook && S().threadMonth !== monthKey(t) ? '<a class="notice" href="#settings">' + icon('gear', 20) + '<span>' + (parseKey(t).getMonth() + 1) + '月のTeamsのスレッドのリンクを、設定に貼ってください。</span></a>' : '') +
     '<p class="brush" id="greet">' + greeting + '</p>' +
     '<div class="row" style="align-items:flex-end;gap:8px;margin-top:-8px"><div class="field"><span class="label">現在の時刻</span><div class="row" style="gap:4px;align-items:baseline"><span class="num numeral" id="clockHM">' + hm(nowM()) + '</span><span class="num" style="font-size:19px;color:var(--usuzumi)" id="clockSS">' + pad(d.getSeconds()) + '</span></div></div>' +
     '<img class="ill" src="img/frog_fan.webp" alt="" style="width:140px;height:148px"></div>' +
@@ -692,7 +716,9 @@ V.settings = () => {
     '<section class="card field" style="gap:12px"><h2 style="font-size:16px">連絡先</h2>' +
     f('ownTo', '自社宛てのメール', s.ownTo, 'email', 'kintai@example.com') + f('siteTo', '現場先宛てのメール', s.siteTo, 'email', 'renraku@example.com') +
     f('selfTo', '自分のメール（月末の書き出し用）', s.selfTo, 'email', 'me@example.com') +
-    f('webhook', 'TeamsのワークフローURL', s.webhook, 'password', 'https://…', 'チャネルの「…」→ワークフロー→「Send webhook alerts to a channel」で作ったURLを貼ります。') +
+    f('webhook', 'TeamsのワークフローURL', s.webhook, 'password', 'https://…', '作り方はREADMEの「Teamsのワークフローを作る」にあります。') +
+    f('threadLink', '返信先スレッドのリンク（毎月）', s.threadLink, 'url', 'https://teams.microsoft.com/l/message/…',
+      (s.threadLink ? (threadOk() ? '読み取れました（' + esc(s.threadMonth ? s.threadMonth.replace('-', '年') + '月分' : '') + '）。' : '<span style="color:var(--shu)">このリンクからは投稿を特定できません。投稿の「…」→「リンクをコピー」のリンクを貼ってください。</span>') : '今月のスレッド（例：2026年 11月度／庄司）の「…」→「リンクをコピー」で取ったリンクを貼ります。')) +
     '<button class="btn" style="height:44px;font-size:15px" data-act="testTeams">テストを1通送る</button></section>' +
     '<section class="card field" style="gap:12px"><h2 style="font-size:16px">いつもの勤務</h2>' +
     '<div class="grid3">' + tsel('start', '始業', s.start, times(5 * 60, 14 * 60)) + tsel('end', '終業', s.end, times(12 * 60, 24 * 60)) + tsel('brk', '休憩', s.brk, ['0:00', '0:30', '0:45', '1:00', '1:15', '1:30', '2:00']) + '</div>' +
@@ -877,7 +903,10 @@ document.addEventListener('change', (e) => {
     const id = el.dataset.setting; let v = el.value;
     if (id === 'otLimit') v = Math.max(1, Number(v) || 20);
     if (id === 'webhook') v = v.trim();
-    DB.settings[id] = v; save(); toast('保存しました。'); return;
+    if (id === 'threadLink') { v = v.trim(); DB.settings.threadMonth = v ? monthKey(todayKey()) : ''; }
+    DB.settings[id] = v; save();
+    if (id === 'threadLink') { toast(v && !parseThread(v) ? 'このリンクからは投稿を特定できませんでした。' : '保存しました。'); render(); return; }
+    toast('保存しました。'); return;
   }
   if (el.dataset.actChange === 'restore') {
     const file = el.files && el.files[0]; if (!file) return;
