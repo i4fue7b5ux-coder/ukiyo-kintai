@@ -1,5 +1,5 @@
-// 浮世勤怠帖：電波がなくても開けるように、アプリのファイルを端末に保存しておく
-const CACHE = 'ukiyo-kintai-v1';
+// 勤怠帖：電波がなくても開けるように、アプリのファイルを端末に保存しておく
+const CACHE = 'ukiyo-kintai-v2';
 const FILES = [
   './', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png',
   './img/frog_fan.webp', './img/mice.webp', './img/cat_procession.webp', './img/mouse_run.webp',

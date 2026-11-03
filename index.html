@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>浮世勤怠帖</title>
+<title>勤怠帖</title>
 <meta name="theme-color" content="#F2EAD8">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="勤怠帖">
@@ -109,7 +109,7 @@ dl{margin:0} dd{margin:0}
 <script>
 'use strict';
 /* =========================================================
-   浮世勤怠帖 — 個人用の勤怠アプリ
+   勤怠帖 — 個人用の勤怠アプリ
    記録と設定はこの端末のブラウザ（localStorage）にだけ保存します。
    ========================================================= */
 
@@ -730,7 +730,7 @@ V.settings = () => {
     '<label class="btn" style="height:44px;font-size:15px" for="restore">記録を読み込む</label><input id="restore" class="sr" type="file" accept="application/json,.json" data-act-change="restore">' +
     '<button class="textbtn" style="align-self:flex-start" data-act="sample">見本の記録を入れて試す</button>' +
     '<button class="textbtn" style="align-self:flex-start;color:var(--shu)" data-act="wipe">' + (ui.confirmReset ? 'もう一度押すと、すべての記録と設定を消します' : 'すべて消す') + '</button></section>' +
-    '<p class="small" style="margin:0">浮世勤怠帖・挿絵は歌川国芳、河鍋暁斎ほかパブリックドメインの作品より。</p>' + tabbar('');
+    '<p class="small" style="margin:0">勤怠帖・挿絵は歌川国芳、河鍋暁斎ほかパブリックドメインの作品より。</p>' + tabbar('');
 };
 
 /* =========================================================
@@ -751,7 +751,7 @@ function render() {
   app.innerHTML = name === 'overtime' ? html : '<main class="screen">' + html.replace(/<nav class="tabbar[\s\S]*<\/nav>$/, '') + '</main>' + (html.match(/<nav class="tabbar[\s\S]*<\/nav>$/) || [''])[0];
   if (render.last === name + JSON.stringify(q)) window.scrollTo(0, y); else window.scrollTo(0, 0);
   render.last = name + JSON.stringify(q);
-  document.title = '浮世勤怠帖';
+  document.title = '勤怠帖';
 }
 window.addEventListener('hashchange', () => {
   const { name } = route();
@@ -865,7 +865,7 @@ const ACT = {
   expTsv(mk) { copyText(tsvOf(mk)); },
   expJson(mk) { const cols = ['月日', '勤怠区分', '開始', '終了', '休憩', '時間', '作業内容(作業場所)', '備考']; copyText(JSON.stringify(exportRows(mk).map((r) => Object.fromEntries(cols.map((c, i) => [c, r[i]]))), null, 2)); },
   expMail(mk) { const p = mk.split('-').map(Number); window.location.href = mailto(S().selfTo, p[0] + '年' + p[1] + '月の勤怠（Excel貼り付け用）', tsvOf(mk)); },
-  async testTeams() { const res = await postTeams('浮世勤怠帖からのテストです（' + md(todayKey()) + ' ' + hm(nowM()) + '）'); toast(res.msg); },
+  async testTeams() { const res = await postTeams('勤怠帖からのテストです（' + md(todayKey()) + ' ' + hm(nowM()) + '）'); toast(res.msg); },
   backup() {
     const blob = new Blob([JSON.stringify(DB, null, 2)], { type: 'application/json' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'ukiyo-kintai-' + todayKey() + '.json'; document.body.appendChild(a); a.click(); a.remove();
